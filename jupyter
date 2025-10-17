@@ -1,135 +1,136 @@
-# === Mental Health & Social Media Balance — Full Visualization Script ===
-# Requirements (install once in your env):
-# pip install pandas numpy seaborn matplotlib plotly
+# Bokeh visuals for Mental_Health_and_Social_Media_Balance_Dataset.csv
+# Plots: (1) Interactive scatter (micro detail) + (2) Aggregated heatmap (macro pattern)
 
 import os
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-import plotly.express as px
 
-# -----------------------------
-# 1) Load dataset (set your path)
-# -----------------------------
-# Option A: absolute path (Windows example) — edit this line to your actual path
+from bokeh.io import output_notebook, show
+from bokeh.plotting import figure
+from bokeh.layouts import column
+from bokeh.models import (
+    ColumnDataSource, HoverTool, LinearColorMapper, ColorBar, BasicTicker, PrintfTickFormatter
+)
+from bokeh.palettes import Turbo256
+
+# ---- Load CSV (edit path if needed) ----
 csv_path = r"C:\Users\<YOURNAME>\Desktop\python\ML\sleep\Mental_Health_and_Social_Media_Balance_Dataset.csv"
-
-# Option B: fallback to current working dir if file not found at csv_path
 if not os.path.isfile(csv_path):
     csv_path = "Mental_Health_and_Social_Media_Balance_Dataset.csv"
-
 df = pd.read_csv(csv_path)
 
-# ------------------------------------
-# 2) Clean types for numeric analytics
-# ------------------------------------
+# ---- Numeric cleanup ----
 num_cols = [
-    'Daily_Screen_Time(hrs)',
-    'Sleep_Quality(1-10)',
-    'Stress_Level(1-10)',
-    'Days_Without_Social_Media',
-    'Exercise_Frequency(week)',
-    'Happiness_Index(1-10)',
+    'Daily_Screen_Time(hrs)', 'Sleep_Quality(1-10)', 'Stress_Level(1-10)',
+    'Days_Without_Social_Media', 'Exercise_Frequency(week)', 'Happiness_Index(1-10)'
 ]
 for c in num_cols:
     if c in df.columns:
         df[c] = pd.to_numeric(df[c], errors='coerce')
 
-# Keep rows needed for key visuals
-df_core = df.dropna(subset=['Daily_Screen_Time(hrs)', 'Sleep_Quality(1-10)', 'Stress_Level(1-10)']).copy()
+# ========= (1) INTERACTIVE SCATTER =========
+sc = df.dropna(subset=['Sleep_Quality(1-10)', 'Days_Without_Social_Media',
+                       'Stress_Level(1-10)', 'Daily_Screen_Time(hrs)']).copy()
 
-# -----------------------------
-# 3) Distributions (histograms)
-# -----------------------------
-sns.set_theme(style="whitegrid")
-fig, axes = plt.subplots(2, 2, figsize=(12, 8))
-axes = axes.ravel()
+# Size map by screen time
+st = sc['Daily_Screen_Time(hrs)']
+sc['size'] = np.interp(st, (st.min(), st.max()), (6, 20))
 
-sns.histplot(df_core['Daily_Screen_Time(hrs)'], bins=20, kde=True, ax=axes[0])
-axes[0].set_title('Daily Screen Time (hrs)')
+source_scatter = ColumnDataSource(sc)
 
-sns.histplot(df_core['Sleep_Quality(1-10)'], bins=10, kde=True, ax=axes[1])
-axes[1].set_title('Sleep Quality (1–10)')
+stress_min = float(sc['Stress_Level(1-10)'].min())
+stress_max = float(sc['Stress_Level(1-10)'].max())
+mapper_scatter = LinearColorMapper(palette=Turbo256, low=stress_min, high=stress_max)
 
-sns.histplot(df_core['Stress_Level(1-10)'], bins=10, kde=True, ax=axes[2])
-axes[2].set_title('Stress Level (1–10)')
+hover_scatter = HoverTool(tooltips=[
+    ('User', '@User_ID'),
+    ('Sleep', '@{Sleep_Quality(1-10)}'),
+    ('Days w/o SM', '@{Days_Without_Social_Media}'),
+    ('Stress', '@{Stress_Level(1-10)}'),
+    ('Screen (hrs)', '@{Daily_Screen_Time(hrs)}')
+])
 
-if 'Days_Without_Social_Media' in df_core.columns:
-    sns.histplot(df_core['Days_Without_Social_Media'], bins=10, kde=False, ax=axes[3])
-    axes[3].set_title('Days Without Social Media')
-
-plt.tight_layout()
-plt.show()
-
-# -----------------------------
-# 4) Correlation heatmap
-# -----------------------------
-corr = df_core[num_cols].corr(numeric_only=True)
-plt.figure(figsize=(8, 6))
-sns.heatmap(corr, annot=True, cmap="RdYlBu_r", vmin=-1, vmax=1, linewidths=0.4, linecolor='gray')
-plt.title('Correlation Heatmap')
-plt.tight_layout()
-plt.show()
-
-# -----------------------------------------------------------
-# 5) Stress heatmap: Days_Without_SM × Sleep_Quality → Stress
-# -----------------------------------------------------------
-# Aggregate duplicates by mean (robust)
-if {'Days_Without_Social_Media', 'Sleep_Quality(1-10)', 'Stress_Level(1-10)'} <= set(df_core.columns):
-    stress_grid = (
-        df_core.pivot_table(
-            index='Days_Without_Social_Media',
-            columns='Sleep_Quality(1-10)',
-            values='Stress_Level(1-10)',
-            aggfunc='mean'
-        )
-        .sort_index()  # rows ascending numeric
-        .round(1)
-    )
-
-    plt.figure(figsize=(10, 7))
-    ax = sns.heatmap(
-        stress_grid,
-        annot=True,
-        fmt=".1f",
-        cmap="RdYlBu_r",
-        linewidths=0.5,
-        linecolor='gray',
-        cbar_kws={'label': 'Stress Level (1–10)'}
-    )
-    ax.set_xlabel("Sleep Quality (1–10)", fontsize=12, labelpad=12)
-    ax.set_ylabel("Days Without Social Media", fontsize=12, labelpad=12)
-    ax.set_title("Stress vs Days Without Social Media and Sleep Quality", fontsize=14, weight='bold', pad=16)
-
-    # Put highest Days_Without_Social_Media at the TOP
-    ax.invert_yaxis()
-
-    plt.xticks(rotation=0)
-    plt.yticks(rotation=0)
-    plt.tight_layout()
-    plt.show()
-
-# ------------------------------------------
-# 6) Interactive 3D scatter (Plotly)
-#    X = Screen Time, Y = Sleep Quality, Z = Stress
-# ------------------------------------------
-fig3d = px.scatter_3d(
-    df_core,
-    x='Daily_Screen_Time(hrs)',
-    y='Sleep_Quality(1-10)',
-    z='Stress_Level(1-10)',
-    color='Stress_Level(1-10)',
-    color_continuous_scale='RdYlBu_r',
-    title='3D View: Stress by Screen Time and Sleep Quality',
-    hover_data=['User_ID'] if 'User_ID' in df_core.columns else None
+p1 = figure(
+    title='Stress vs Days Without Social Media and Sleep Quality',
+    x_axis_label='Sleep Quality (1-10)',
+    y_axis_label='Days Without Social Media',
+    tools=[hover_scatter, 'pan', 'wheel_zoom', 'box_select', 'reset', 'save'],
+    width=800, height=550
 )
-fig3d.update_traces(marker=dict(size=4, opacity=0.8))
-fig3d.update_layout(scene=dict(
-    xaxis_title='Daily Screen Time (hrs)',
-    yaxis_title='Sleep Quality (1–10)',
-    zaxis_title='Stress Level (1–10)'
-))
-# In notebooks: fig3d.show()
-# In scripts: this will open a browser tab (if renderer configured)
-fig3d.show()
+
+r = p1.circle(
+    x='Sleep_Quality(1-10)', y='Days_Without_Social_Media',
+    size='size', alpha=0.85, line_color=None, source=source_scatter,
+    fill_color={'field': 'Stress_Level(1-10)', 'transform': mapper_scatter}
+)
+
+color_bar_scatter = ColorBar(
+    color_mapper=mapper_scatter, label_standoff=8, location=(0, 0),
+    ticker=BasicTicker(desired_num_ticks=8),
+    formatter=PrintfTickFormatter(format="%0.1f"),
+    title='Stress'
+)
+p1.add_layout(color_bar_scatter, 'right')
+
+# ========= (2) AGGREGATED HEATMAP =========
+core = df.dropna(subset=['Days_Without_Social_Media', 'Sleep_Quality(1-10)', 'Stress_Level(1-10)']).copy()
+pivot = (core.pivot_table(
+    index='Days_Without_Social_Media',
+    columns='Sleep_Quality(1-10)',
+    values='Stress_Level(1-10)',
+    aggfunc='mean'
+).round(2))
+
+hm = pivot.reset_index().melt(
+    id_vars='Days_Without_Social_Media',
+    var_name='Sleep_Quality(1-10)',
+    value_name='Stress'
+)
+
+# Categorical axes (reverse y to put highest "Days" on top)
+hm['Sleep_str'] = hm['Sleep_Quality(1-10)'].astype(float).map(lambda v: f"{int(v)}" if v.is_integer() else f"{v:.1f}")
+hm['Days_str'] = hm['Days_Without_Social_Media'].astype(float).map(lambda v: f"{int(v)}" if v.is_integer() else f"{v:.1f}")
+
+xcats = sorted(hm['Sleep_str'].unique(), key=lambda s: float(s))
+ycats = sorted(hm['Days_str'].unique(), key=lambda s: float(s), reverse=True)  # highest at top
+
+source_hm = ColumnDataSource(hm)
+
+val_min = float(hm['Stress'].min())
+val_max = float(hm['Stress'].max())
+mapper_hm = LinearColorMapper(palette=Turbo256, low=val_min, high=val_max)
+
+hover_hm = HoverTool(tooltips=[
+    ('Sleep', '@Sleep_str'),
+    ('Days w/o SM', '@Days_str'),
+    ('Mean Stress', '@Stress')
+])
+
+p2 = figure(
+    title='Mean Stress by (Days Without Social Media × Sleep Quality)',
+    x_range=xcats, y_range=ycats,
+    x_axis_label='Sleep Quality (1-10)',
+    y_axis_label='Days Without Social Media',
+    tools=[hover_hm, 'pan', 'wheel_zoom', 'reset', 'save'],
+    width=800, height=700
+)
+
+p2.rect(
+    x='Sleep_str', y='Days_str',
+    width=1, height=1,
+    source=source_hm,
+    fill_color={'field': 'Stress', 'transform': mapper_hm},
+    line_color=None
+)
+
+color_bar_hm = ColorBar(
+    color_mapper=mapper_hm, label_standoff=8, location=(0, 0),
+    ticker=BasicTicker(desired_num_ticks=8),
+    formatter=PrintfTickFormatter(format="%0.1f"),
+    title='Mean Stress'
+)
+p2.add_layout(color_bar_hm, 'right')
+
+# ---- Display (Jupyter inline) ----
+output_notebook()
+show(column(p1, p2))
