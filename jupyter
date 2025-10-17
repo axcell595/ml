@@ -1,0 +1,69 @@
+---------------------------------------------------------------------------
+ValueError                                Traceback (most recent call last)
+Cell In[24], line 7
+      2 import seaborn as sns
+      3 sns.set_theme()
+      5 stress = (
+      6     df
+----> 7     .pivot(index='Days_Without_Social_Media', columns='Sleep_Quality(1-10)', values='Stress_Level(1-10)')
+      8 )
+     10 # Draw a heatmap with the numeric values in each cell
+     11 f, ax = plt.subplots(figsize=(9,6))
+
+File ~\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\frame.py:9366, in DataFrame.pivot(self, columns, index, values)
+   9359 @Substitution("")
+   9360 @Appender(_shared_docs["pivot"])
+   9361 def pivot(
+   9362     self, *, columns, index=lib.no_default, values=lib.no_default
+   9363 ) -> DataFrame:
+   9364     from pandas.core.reshape.pivot import pivot
+-> 9366     return pivot(self, index=index, columns=columns, values=values)
+
+File ~\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\reshape\pivot.py:570, in pivot(data, columns, index, values)
+    566         indexed = data._constructor_sliced(data[values]._values, index=multiindex)
+    567 # error: Argument 1 to "unstack" of "DataFrame" has incompatible type "Union
+    568 # [List[Any], ExtensionArray, ndarray[Any, Any], Index, Series]"; expected
+    569 # "Hashable"
+--> 570 result = indexed.unstack(columns_listlike)  # type: ignore[arg-type]
+    571 result.index.names = [
+    572     name if name is not lib.no_default else None for name in result.index.names
+    573 ]
+    575 return result
+
+File ~\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\series.py:4634, in Series.unstack(self, level, fill_value, sort)
+   4589 """
+   4590 Unstack, also known as pivot, Series with MultiIndex to produce DataFrame.
+   4591 
+   (...)   4630 b    2    4
+   4631 """
+   4632 from pandas.core.reshape.reshape import unstack
+-> 4634 return unstack(self, level, fill_value, sort)
+
+File ~\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\reshape\reshape.py:517, in unstack(obj, level, fill_value, sort)
+    515 if is_1d_only_ea_dtype(obj.dtype):
+    516     return _unstack_extension_series(obj, level, fill_value, sort=sort)
+--> 517 unstacker = _Unstacker(
+    518     obj.index, level=level, constructor=obj._constructor_expanddim, sort=sort
+    519 )
+    520 return unstacker.get_result(
+    521     obj._values, value_columns=None, fill_value=fill_value
+    522 )
+
+File ~\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\reshape\reshape.py:154, in _Unstacker.__init__(self, index, level, constructor, sort)
+    146 if num_cells > np.iinfo(np.int32).max:
+    147     warnings.warn(
+    148         f"The following operation may generate {num_cells} cells "
+    149         f"in the resulting pandas object.",
+    150         PerformanceWarning,
+    151         stacklevel=find_stack_level(),
+    152     )
+--> 154 self._make_selectors()
+
+File ~\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\reshape\reshape.py:210, in _Unstacker._make_selectors(self)
+    207 mask.put(selector, True)
+    209 if mask.sum() < len(self.index):
+--> 210     raise ValueError("Index contains duplicate entries, cannot reshape")
+    212 self.group_index = comp_index
+    213 self.mask = mask
+
+ValueError: Index contains duplicate entries, cannot reshape
