@@ -1,27 +1,30 @@
-import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# Load dataset
-df = pd.read_csv("Mental_Health_and_Social_Media_Balance_Dataset.csv")
+plt.figure(figsize=(10,7))  # larger figure
+sns.set_theme(style="white")
 
-# Convert relevant columns to numeric (ignore text like 'U001')
-for col in ['Days_Without_Social_Media', 'Sleep_Quality(1-10)', 'Stress_Level(1-10)']:
-    df[col] = pd.to_numeric(df[col], errors='coerce')
-
-# Drop any rows with missing numeric values
-df = df.dropna(subset=['Days_Without_Social_Media', 'Sleep_Quality(1-10)', 'Stress_Level(1-10)'])
-
-# Aggregate duplicates properly
-stress = df.pivot_table(
-    index='Days_Without_Social_Media',
-    columns='Sleep_Quality(1-10)',
-    values='Stress_Level(1-10)',
-    aggfunc='mean'
+ax = sns.heatmap(
+    stress,
+    annot=True,
+    fmt=".1f",
+    cmap="RdYlBu_r",        # smoother red–blue palette
+    linewidths=0.5,         # thin grid lines
+    linecolor='gray',
+    cbar_kws={'label': 'Stress Level (1–10)'}
 )
 
-# Plot the heatmap
-plt.figure(figsize=(9,6))
-sns.heatmap(stress, annot=True, fmt=".1f", cmap="coolwarm")
-plt.title("Stress Level vs Days Without Social Media and Sleep Quality")
+# Better labels
+ax.set_xlabel("Sleep Quality (1–10)", fontsize=12, labelpad=12)
+ax.set_ylabel("Days Without Social Media", fontsize=12, labelpad=12)
+ax.set_title(
+    "Stress Level vs Days Without Social Media and Sleep Quality",
+    fontsize=14,
+    pad=20,
+    weight='bold'
+)
+
+plt.xticks(rotation=0, fontsize=10)
+plt.yticks(rotation=0, fontsize=10)
+plt.tight_layout()          # fixes overlapping margins
 plt.show()
