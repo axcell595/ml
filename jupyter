@@ -1,30 +1,135 @@
+# === Mental Health & Social Media Balance — Full Visualization Script ===
+# Requirements (install once in your env):
+# pip install pandas numpy seaborn matplotlib plotly
+
+import os
+import numpy as np
+import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import plotly.express as px
 
-plt.figure(figsize=(10,7))  # larger figure
-sns.set_theme(style="white")
+# -----------------------------
+# 1) Load dataset (set your path)
+# -----------------------------
+# Option A: absolute path (Windows example) — edit this line to your actual path
+csv_path = r"C:\Users\<YOURNAME>\Desktop\python\ML\sleep\Mental_Health_and_Social_Media_Balance_Dataset.csv"
 
-ax = sns.heatmap(
-    stress,
-    annot=True,
-    fmt=".1f",
-    cmap="RdYlBu_r",        # smoother red–blue palette
-    linewidths=0.5,         # thin grid lines
-    linecolor='gray',
-    cbar_kws={'label': 'Stress Level (1–10)'}
-)
+# Option B: fallback to current working dir if file not found at csv_path
+if not os.path.isfile(csv_path):
+    csv_path = "Mental_Health_and_Social_Media_Balance_Dataset.csv"
 
-# Better labels
-ax.set_xlabel("Sleep Quality (1–10)", fontsize=12, labelpad=12)
-ax.set_ylabel("Days Without Social Media", fontsize=12, labelpad=12)
-ax.set_title(
-    "Stress Level vs Days Without Social Media and Sleep Quality",
-    fontsize=14,
-    pad=20,
-    weight='bold'
-)
+df = pd.read_csv(csv_path)
 
-plt.xticks(rotation=0, fontsize=10)
-plt.yticks(rotation=0, fontsize=10)
-plt.tight_layout()          # fixes overlapping margins
+# ------------------------------------
+# 2) Clean types for numeric analytics
+# ------------------------------------
+num_cols = [
+    'Daily_Screen_Time(hrs)',
+    'Sleep_Quality(1-10)',
+    'Stress_Level(1-10)',
+    'Days_Without_Social_Media',
+    'Exercise_Frequency(week)',
+    'Happiness_Index(1-10)',
+]
+for c in num_cols:
+    if c in df.columns:
+        df[c] = pd.to_numeric(df[c], errors='coerce')
+
+# Keep rows needed for key visuals
+df_core = df.dropna(subset=['Daily_Screen_Time(hrs)', 'Sleep_Quality(1-10)', 'Stress_Level(1-10)']).copy()
+
+# -----------------------------
+# 3) Distributions (histograms)
+# -----------------------------
+sns.set_theme(style="whitegrid")
+fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+axes = axes.ravel()
+
+sns.histplot(df_core['Daily_Screen_Time(hrs)'], bins=20, kde=True, ax=axes[0])
+axes[0].set_title('Daily Screen Time (hrs)')
+
+sns.histplot(df_core['Sleep_Quality(1-10)'], bins=10, kde=True, ax=axes[1])
+axes[1].set_title('Sleep Quality (1–10)')
+
+sns.histplot(df_core['Stress_Level(1-10)'], bins=10, kde=True, ax=axes[2])
+axes[2].set_title('Stress Level (1–10)')
+
+if 'Days_Without_Social_Media' in df_core.columns:
+    sns.histplot(df_core['Days_Without_Social_Media'], bins=10, kde=False, ax=axes[3])
+    axes[3].set_title('Days Without Social Media')
+
+plt.tight_layout()
 plt.show()
+
+# -----------------------------
+# 4) Correlation heatmap
+# -----------------------------
+corr = df_core[num_cols].corr(numeric_only=True)
+plt.figure(figsize=(8, 6))
+sns.heatmap(corr, annot=True, cmap="RdYlBu_r", vmin=-1, vmax=1, linewidths=0.4, linecolor='gray')
+plt.title('Correlation Heatmap')
+plt.tight_layout()
+plt.show()
+
+# -----------------------------------------------------------
+# 5) Stress heatmap: Days_Without_SM × Sleep_Quality → Stress
+# -----------------------------------------------------------
+# Aggregate duplicates by mean (robust)
+if {'Days_Without_Social_Media', 'Sleep_Quality(1-10)', 'Stress_Level(1-10)'} <= set(df_core.columns):
+    stress_grid = (
+        df_core.pivot_table(
+            index='Days_Without_Social_Media',
+            columns='Sleep_Quality(1-10)',
+            values='Stress_Level(1-10)',
+            aggfunc='mean'
+        )
+        .sort_index()  # rows ascending numeric
+        .round(1)
+    )
+
+    plt.figure(figsize=(10, 7))
+    ax = sns.heatmap(
+        stress_grid,
+        annot=True,
+        fmt=".1f",
+        cmap="RdYlBu_r",
+        linewidths=0.5,
+        linecolor='gray',
+        cbar_kws={'label': 'Stress Level (1–10)'}
+    )
+    ax.set_xlabel("Sleep Quality (1–10)", fontsize=12, labelpad=12)
+    ax.set_ylabel("Days Without Social Media", fontsize=12, labelpad=12)
+    ax.set_title("Stress vs Days Without Social Media and Sleep Quality", fontsize=14, weight='bold', pad=16)
+
+    # Put highest Days_Without_Social_Media at the TOP
+    ax.invert_yaxis()
+
+    plt.xticks(rotation=0)
+    plt.yticks(rotation=0)
+    plt.tight_layout()
+    plt.show()
+
+# ------------------------------------------
+# 6) Interactive 3D scatter (Plotly)
+#    X = Screen Time, Y = Sleep Quality, Z = Stress
+# ------------------------------------------
+fig3d = px.scatter_3d(
+    df_core,
+    x='Daily_Screen_Time(hrs)',
+    y='Sleep_Quality(1-10)',
+    z='Stress_Level(1-10)',
+    color='Stress_Level(1-10)',
+    color_continuous_scale='RdYlBu_r',
+    title='3D View: Stress by Screen Time and Sleep Quality',
+    hover_data=['User_ID'] if 'User_ID' in df_core.columns else None
+)
+fig3d.update_traces(marker=dict(size=4, opacity=0.8))
+fig3d.update_layout(scene=dict(
+    xaxis_title='Daily Screen Time (hrs)',
+    yaxis_title='Sleep Quality (1–10)',
+    zaxis_title='Stress Level (1–10)'
+))
+# In notebooks: fig3d.show()
+# In scripts: this will open a browser tab (if renderer configured)
+fig3d.show()
