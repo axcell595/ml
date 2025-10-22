@@ -1,28 +1,66 @@
-#  --- 2 ---
-# Write a program which can compute the factorial of a given numbers.
-# The results should be printed in a comma-separated sequence on a single line.
-# Suppose the following input is supplied to the program: 8 Then, the output should be:40320
+Main author's Solution: Python 2
 
-# Hints: In case of input data being supplied to the question, it should be assumed to be a console input.
+def fact(x):
+    if x == 0:
+        return 1
+    return x * fact(x - 1)
 
-import math
+x = int(raw_input())
+print fact(x)
 
+My Solution: Python 3
 
-input_n = input('Please enter a number: ')
-n = int(input_n)
-n_factorial = math.factorial(int(n))
-print(n_factorial)
+    Using While Loop
 
-sequence = []
-for x in range(n, 1, -1):
-    x -= 1  # should give n! = n * (n - 1)
-    sequence.append(str(x))
-print(f'{n}!= {n} x '+' x '.join(sequence))
+    n = int(input()) #input() function takes input as string type
+                     #int() converts it to integer type
+    fact = 1
+    i = 1
+    while i <= n:
+        fact = fact * i;
+        i = i + 1
+    print(fact)
 
-solution = []
-result = 1
-for i in range(1, n + 1):
-    result *= i  # result = result * i
-    solution.append(str(result))
-print(f'{n}!= {result}')
-print(', '.join(solution))
+Using For Loop
+
+n = int(input()) #input() function takes input as string type
+                #int() converts it to integer type
+fact = 1
+for i in range(1,n+1):
+    fact = fact * i
+print(fact)
+
+Using Lambda Function
+
+# Solution by:  harshraj22
+
+n = int(input())
+def shortFact(x): return 1 if x <= 1 else x*shortFact(x-1)
+print(shortFact(n))
+
+'''Solution by: minnielahoti
+'''
+
+while True:
+try:
+    num = int(input("Enter a number: "))
+    break
+except ValueError as err:
+    print(err)
+
+org = num
+fact = 1
+while num:
+    fact = num * fact
+    num = num - 1
+print(f'the factorial of {org} is {fact}')
+
+'''Soltuion by: KruthikaSR
+'''
+from functools import reduce
+
+def fun(acc, item):
+	return acc*item
+
+num = int(input())
+print(reduce(fun,range(1, num+1), 1))
