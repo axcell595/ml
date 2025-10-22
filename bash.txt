@@ -1,59 +1,16 @@
-(dev) deko@deko-X1:~/Python/Image Processing$ pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-Looking in indexes: https://download.pytorch.org/whl/cpu
-Collecting torch
-  Using cached https://download.pytorch.org/whl/cpu/torch-2.9.0%2Bcpu-cp313-cp313-manylinux_2_28_x86_64.whl.metadata (29 kB)
-Collecting torchvision
-  Using cached https://download.pytorch.org/whl/cpu/torchvision-0.24.0%2Bcpu-cp313-cp313-manylinux_2_28_x86_64.whl.metadata (5.9 kB)
-Requirement already satisfied: filelock in ./dev/lib/python3.13/site-packages (from torch) (3.20.0)
-Requirement already satisfied: typing-extensions>=4.10.0 in ./dev/lib/python3.13/site-packages (from torch) (4.15.0)
-Requirement already satisfied: setuptools in ./dev/lib/python3.13/site-packages (from torch) (80.9.0)
-Requirement already satisfied: sympy>=1.13.3 in ./dev/lib/python3.13/site-packages (from torch) (1.14.0)
-Requirement already satisfied: networkx>=2.5.1 in ./dev/lib/python3.13/site-packages (from torch) (3.5)
-Requirement already satisfied: jinja2 in ./dev/lib/python3.13/site-packages (from torch) (3.1.6)
-Requirement already satisfied: fsspec>=0.8.5 in ./dev/lib/python3.13/site-packages (from torch) (2025.9.0)
-Requirement already satisfied: numpy in ./dev/lib/python3.13/site-packages (from torchvision) (2.2.6)
-Requirement already satisfied: pillow!=8.3.*,>=5.3.0 in ./dev/lib/python3.13/site-packages (from torchvision) (12.0.0)
-Requirement already satisfied: mpmath<1.4,>=1.1.0 in ./dev/lib/python3.13/site-packages (from sympy>=1.13.3->torch) (1.3.0)
-Requirement already satisfied: MarkupSafe>=2.0 in ./dev/lib/python3.13/site-packages (from jinja2->torch) (3.0.3)
-Using cached https://download.pytorch.org/whl/cpu/torch-2.9.0%2Bcpu-cp313-cp313-manylinux_2_28_x86_64.whl (184.4 MB)
-Using cached https://download.pytorch.org/whl/cpu/torchvision-0.24.0%2Bcpu-cp313-cp313-manylinux_2_28_x86_64.whl (1.9 MB)
-Installing collected packages: torch, torchvision
-Successfully installed torch-2.9.0+cpu torchvision-0.24.0+cpu
-(dev) deko@deko-X1:~/Python/Image Processing$ python3 image_pss.py
-/home/deko/Python/Image Processing/dev/lib/python3.13/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
-  warnings.warn(
-/home/deko/Python/Image Processing/dev/lib/python3.13/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=None`.
-  warnings.warn(msg)
-/home/deko/Python/Image Processing/dev/lib/python3.13/site-packages/torchvision/models/inception.py:43: FutureWarning: The default weight initialization of inception_v3 will be changed in future releases of torchvision. If you wish to keep the old behavior (which leads to long initialization times due to scipy/scipy#11299), please set init_weights=True.
-  warnings.warn(
-Traceback (most recent call last):
-  File "/home/deko/Python/Image Processing/dev/lib/python3.13/site-packages/imageai/Classification/__init__.py", line 162, in loadModel
-    state_dict = torch.load(self.__model_path)
-  File "/home/deko/Python/Image Processing/dev/lib/python3.13/site-packages/torch/serialization.py", line 1546, in load
-    return _legacy_load(
-        opened_file,
-    ...<2 lines>...
-        **pickle_load_args,
-    )
-  File "/home/deko/Python/Image Processing/dev/lib/python3.13/site-packages/torch/serialization.py", line 1792, in _legacy_load
-    return legacy_load(f)
-  File "/home/deko/Python/Image Processing/dev/lib/python3.13/site-packages/torch/serialization.py", line 1659, in legacy_load
-    raise RuntimeError(
-    ...<2 lines>...
-    )
-RuntimeError: Cannot use ``weights_only=True`` with files saved in the legacy .tar format. In PyTorch 2.6, we changed the default value of the `weights_only` argument in `torch.load` from `False` to `True`. Re-running `torch.load` with `weights_only` set to `False` will likely succeed, but it can result in arbitrary code execution. Do it only if you got the file from a trusted source.
-None
-Weight loading failed.
-Ensure the model path is set and the weight file is in the specified model path.
-Model loaded successfully!
-Traceback (most recent call last):
-  File "/home/deko/Python/Image Processing/image_pss.py", line 17, in <module>
-    predictions, probabilities = prediction.classifyImage(
-                                 ~~~~~~~~~~~~~~~~~~~~~~~~^
-        os.path.join(execution_path, "./samples/yemeni.jpg"), result_count=5)
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/deko/Python/Image Processing/dev/lib/python3.13/site-packages/imageai/Classification/__init__.py", line 210, in classifyImage
-    raise RuntimeError(
-        "Model not yet loaded. You need to call '.loadModel()' before performing image classification"
-    )
-RuntimeError: Model not yet loaded. You need to call '.loadModel()' before performing image classification
+# activate your venv
+source dev/bin/activate
+
+# back up the file
+cp "dev/lib/python3.13/site-packages/imageai/Classification/__init__.py" \
+   "dev/lib/python3.13/site-packages/imageai/Classification/__init__.py.bak"
+
+# patch torch.load(...) → torch.load(..., weights_only=False)
+sed -i "s/torch.load(self.__model_path)/torch.load(self.__model_path, weights_only=False)/" \
+   "dev/lib/python3.13/site-packages/imageai/Classification/__init__.py"
+
+# if it also appears in backend_check or elsewhere, patch those too
+grep -Rn "torch.load(" "dev/lib/python3.13/site-packages/imageai" || true
+
+# rerun
+python3 image_pss.py
