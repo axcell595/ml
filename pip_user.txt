@@ -1,21 +1,135 @@
-deko@deko-X1:~/Python/Image Processing$ sudo pip3 uninstall -y $(pip3 list --format=freeze | grep '^types-' | cut -d'=' -f1)
-error: externally-managed-environment
-
-× This environment is externally managed
-╰─> To install Python packages system-wide, try apt install
-    python3-xyz, where xyz is the package you are trying to
-    install.
-    
-    If you wish to install a non-Debian-packaged Python package,
-    create a virtual environment using python3 -m venv path/to/venv.
-    Then use path/to/venv/bin/python and path/to/venv/bin/pip. Make
-    sure you have python3-full installed.
-    
-    If you wish to install a non-Debian packaged Python application,
-    it may be easiest to use pipx install xyz, which will manage a
-    virtual environment for you. Make sure you have pipx installed.
-    
-    See /usr/share/doc/python3.13/README.venv for more information.
-
-note: If you believe this is a mistake, please contact your Python installation or OS distribution provider. You can override this, at the risk of breaking your Python installation or OS, by passing --break-system-packages.
-hint: See PEP 668 for the detailed specification.
+sudo apt update && sudo apt upgrade -y
+sudo apt get install os-prober
+sudo apt-get install os-prober
+sudo apt-get install grub-customizer
+sudo apt update
+sudo apt list --upgradable
+sudo apt list --upgradable -a
+sudo add-apt-repository ppa:danielrichter2007/grub-customizer
+sudo apt update
+sudo apt install grub-customizer
+cd diwnloads
+cd downloads
+cd ~/downloads
+cd ~/Downloads
+tar -xf vimix-2k.tar.xz
+ls
+tar -xf Vimix-2k.tar.xz
+ls
+sudo mkdir -p /boot/grub/themes
+sudo mv ~/Downloads/Vimix-2k/ /boot/grub/themes
+ls
+sudo mv /boot/grub/themes/Vimix-2k/* /boot/grub/themes/Vimix/
+sudo mv /boot/grub/themes/Vimix-2k/* /boot/grub/themes/
+sudo chmoda -R 755 /boot/grub/themes
+sudo chmod -R 755 /boot/grub/themes
+clear
+sudo nano /etc/default/grub
+ls /boot/grub/themes
+ls /boot/grub/themes/Vimix
+sudo cp /etc/default/grub /etc/default/grub.bak
+echo 'GRUB_THEME="/boot/grub/themes/Vimix/theme.txt"' | sudo tee -a /etc/default/grub
+sudo chmod -R 755 /boot/grub/themes
+sudo sed -i 's/^#\?GRUB_GFXMODE=.*/GRUB_GFXMODE=1920x1080/' /etc/default/grub || echo 'GRUB_GFXMODE=1920x1080' | sudo tee -a /etc/default/grub
+echo 'GRUB_GFXPAYLOAD_LINUX=keep' | sudo tee -a /etc/default/grub
+sudo update-grub
+reboot
+sudo nano /etc/default/grub
+ls /etc/grub.d/
+ls /etc/grub.d/20_memtest86+_proxy
+sudo chmod -x /etc/grub.d/20_memtest86+_proxy
+sudo update-grub
+reboot
+sudo grub-customizer
+reboot
+sudo software-properties-gtk
+sudo snap set system experimental.parallel-downloads=true
+sudo apt update && sudo apt upgrade -y
+sudp apt install -y python3 python3-pip python3-venv build-essential
+sudo apt install -y python3 python3-pip python3-venv build-essential
+sudo software-properties-gtk
+sudo apt update
+curl -s https://speed.hetzner.de/100MB.bin -o /dev/null -w "%{speed_download}\n"
+clear
+sudo apt install -y python3 python3-pip python3-venv build-essential
+sudo apt install -y git curl wget
+python3 --version
+pip3 --version
+sudo snap install --classic code
+sudo apt update
+sudo apt install software-properties-common apt-transport-https wget -y
+wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
+sudo sh -c 'echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
+sudo apt update
+sudo apt install code
+code --version
+clear
+sudo apt install pycharm-community --classic
+sudo apt install pycharm-community
+pip3 install jupyterlab
+exit
+code --list-extensions
+code
+reboot
+sudo systemctl disable bluetooth.service
+sudo nano /etc/bluetooth/main.conf
+clear
+sudo fwupdmgr get-updates
+sudo fwupdmgr update
+python3
+pip3 install virtualenv pipenv black isort flake8 pytest
+python3
+python3 -m venv ~/.venvs/dev
+source ~/.venvs/dev/activate
+source ~/.venvs/dev/bin/activate
+pip3 install virtualenv pipenv black isort flake8 pytest
+jupyter-lab
+sudo apt install jupyterlab
+pip3 install requests beautifulsoup4 matplotlib pandas numpy flask
+pip3 install selenium 
+pip3 install playwright
+playwright install
+sudo apt install chromium-browser chromium-chromedrive
+jupyter-lab
+sudo apt update
+sudo apt upgrade
+sudo apt autoremove
+clear
+sudo fwupdmgr get-updates
+clear
+sudo fwupdmgr get-updates
+jupyter-lab
+playwright
+pip3 list -v
+pip list --user
+pip3 list --user
+clear
+jupyter-lab
+source ~/.venvs/dev/bin/activate
+pip3 install scikit-learn
+jupyter-lab
+pip3 install scikit-learn
+pip3 show scikit-learn
+pip3 show jupyterlab
+pip3 show jupyter-lab
+pip3 install jupyter-lab
+jupyter-lab
+deactivate
+jupyter lab
+jupyter-lab
+exit
+pip list -v
+pip3 list -v
+source ~/.venvs/dev/bin/activate
+pip3 install ipykernel
+python -m ipykernel install --user --name=dev_env --display-name="Python (dev_env with scikit-learn)"
+pip3 install numpy scipy
+pip3 install ipykernel
+deactivate
+exit
+pip3 list -v
+pip3 show black
+pip3 show black-formatter
+pip3 show ms-python.black-formatter
+pip3 show jupyter
