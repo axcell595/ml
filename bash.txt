@@ -1,16 +1,41 @@
-# activate your venv
-source dev/bin/activate
+ out of these 3 versions which is the cleanest and why? Rate other options on the scale of 1-10.
 
-# back up the file
-cp "dev/lib/python3.13/site-packages/imageai/Classification/__init__.py" \
-   "dev/lib/python3.13/site-packages/imageai/Classification/__init__.py.bak"
+1.
 
-# patch torch.load(...) → torch.load(..., weights_only=False)
-sed -i "s/torch.load(self.__model_path)/torch.load(self.__model_path, weights_only=False)/" \
-   "dev/lib/python3.13/site-packages/imageai/Classification/__init__.py"
+l=[]for i in range(2000, 3201):
 
-# if it also appears in backend_check or elsewhere, patch those too
-grep -Rn "torch.load(" "dev/lib/python3.13/site-packages/imageai" || true
+if (i%7==0) and (i%5!=0):
 
-# rerun
-python3 image_pss.py
+l.append(str(i))print ','.join(l)
+
+
+2.
+
+for i in range(2000,3201):
+
+    if i%7 == 0 and i%5!=0:
+
+        print(i,end=',')
+
+print("\b")
+
+
+3.
+
+print(*(i for i in range(2000, 3201) if i%7 == 0 and i%5 != 0), sep=",")
+
+
+4.
+
+answer = []
+
+for x in range(2000, 3201):
+
+if x % 7 == 0 and x % 5 != 0:
+
+answer.append(x)
+
+continue
+
+
+print(answer) 
