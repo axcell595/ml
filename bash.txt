@@ -1,35 +1,28 @@
- out of these 3 versions which is the cleanest and why? Rate other options on the scale of 1-10.
+#  --- 2 ---
+# Write a program which can compute the factorial of a given numbers.
+# The results should be printed in a comma-separated sequence on a single line.
+# Suppose the following input is supplied to the program: 8 Then, the output should be:40320
 
-1.
+# Hints: In case of input data being supplied to the question, it should be assumed to be a console input.
 
-l=[]for i in range(2000, 3201):
-
-if (i%7==0) and (i%5!=0):
-
-l.append(str(i))print ','.join(l)
-
-
-2.
-
-for i in range(2000,3201):
-
-    if i%7 == 0 and i%5!=0:
-
-        print(i,end=',')
-
-print("\b")
+import math
 
 
-3.
+input_n = input('Please enter a number: ')
+n = int(input_n)
+n_factorial = math.factorial(int(n))
+print(n_factorial)
 
-print(*(i for i in range(2000, 3201) if i%7 == 0 and i%5 != 0), sep=",")
+sequence = []
+for x in range(n, 1, -1):
+    x -= 1  # should give n! = n * (n - 1)
+    sequence.append(str(x))
+print(f'{n}!= {n} x '+' x '.join(sequence))
 
-
-4.
-answer = []
-for x in range(2000, 3201):
-    if x % 7 == 0 and x % 5 != 0:
-        answer.append(str(x))
-    
-print(', '.join(answer))
-
+solution = []
+result = 1
+for i in range(1, n + 1):
+    result *= i  # result = result * i
+    solution.append(str(result))
+print(f'{n}!= {result}')
+print(', '.join(solution))
