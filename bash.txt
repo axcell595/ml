@@ -1,66 +1,86 @@
-Main author's Solution: Python 2
+1.
+from math import sqrt
 
-def fact(x):
-    if x == 0:
-        return 1
-    return x * fact(x - 1)
 
-x = int(raw_input())
-print fact(x)
+C, H = 50, 30
 
-My Solution: Python 3
+string_in = [int(d) for d in input('Enter numbers: ').split(',')]
+answer = []
 
-    Using While Loop
+for D in string_in:
+    Q = sqrt((2 * C * D) / H)
+    answer.append(str(round(Q)))
 
-    n = int(input()) #input() function takes input as string type
-                     #int() converts it to integer type
-    fact = 1
-    i = 1
-    while i <= n:
-        fact = fact * i;
-        i = i + 1
-    print(fact)
+print(','.join(answer))
 
-Using For Loop
+2.
+from math import sqrt # import specific functions as importing all using *
+                      # is bad practice
 
-n = int(input()) #input() function takes input as string type
-                #int() converts it to integer type
-fact = 1
-for i in range(1,n+1):
-    fact = fact * i
-print(fact)
+C,H = 50,30
 
-Using Lambda Function
+def calc(D):
+    return sqrt((2*C*D)/H)
 
-# Solution by:  harshraj22
+D = [int(i) for i in input().split(',')] # splits in comma position and set up in list
+D = [int(i) for i in D]   # converts string to integer
+D = [calc(i) for i in D]  # returns floating value by calc method for every item in D
+D = [round(i) for i in D] # All the floating values are rounded
+D = [str(i) for i in D]   # All the integers are converted to string to be able to apply join operation
 
-n = int(input())
-def shortFact(x): return 1 if x <= 1 else x*shortFact(x-1)
-print(shortFact(n))
+print(",".join(D))
 
-'''Solution by: minnielahoti
+3.
+from math import sqrt
+
+C,H = 50,30
+
+def calc(D):
+    return sqrt((2*C*D)/H)
+
+D = input().split(',')                     # splits in comma position and set up in list
+D = [str(round(calc(int(i)))) for i in D]  # using comprehension method. It works in order of the previous code
+print(",".join(D))
+
+4.
+from math import sqrt
+C,H = 50,30
+
+def calc(D):
+    return sqrt((2*C*D)/H)
+
+print(",".join([str(int(calc(int(i)))) for i in input().split(',')]))
+
+5.
+from math import * # importing all math functions
+C,H = 50,30
+
+def calc(D):
+    D = int(D)
+    return str(int(sqrt((2*C*D)/H)))
+
+D = input().split(',')
+D = list(map(calc,D))   # applying calc function on D and storing as a list
+print(",".join(D))
+
+6.
+'''Solution by: parian5
+'''
+from math import sqrt
+C, H = 50, 30
+mylist = input().split(',')
+print(*(round(sqrt(2*C*int(D)/H)) for D in mylist), sep=",")
+
+7.
+
+'''Solution by: saxenaharsh24
 '''
 
-while True:
-try:
-    num = int(input("Enter a number: "))
-    break
-except ValueError as err:
-    print(err)
+my_list = [int(x) for x in input('').split(',')]
+C, H, x = 50, 30, []
 
-org = num
-fact = 1
-while num:
-    fact = num * fact
-    num = num - 1
-print(f'the factorial of {org} is {fact}')
+for D in my_list:
+    Q = ((2*C*D)/H)**(1/2)
+    x.append(round(Q))
 
-'''Soltuion by: KruthikaSR
-'''
-from functools import reduce
-
-def fun(acc, item):
-	return acc*item
-
-num = int(input())
-print(reduce(fun,range(1, num+1), 1))
+print(','.join(map(str, x)))
