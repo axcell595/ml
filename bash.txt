@@ -1,51 +1,13 @@
-/home/deko/Python/Automation/process_invoices.py:11: UserWarning: Parsing dates in %d/%m/%Y format when dayfirst=False (the default) was specified. Pass `dayfirst=True` or specify a format to silence this warning.
-  df['DueDate'] = pd.to_datetime(df['DueDate'])
-Traceback (most recent call last):
-  File "/home/deko/Python/Automation/process_invoices.py", line 20, in <module>
-    df['Status'] = df['DueDate'].apply(lambda d: 'Overdue' if d.date() < today else 'Due')
-                   ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/deko/Python/Automation/venv/auto/lib/python3.13/site-packages/pandas/core/series.py", line 4943, in apply
-    ).apply()
-      ~~~~~^^
-  File "/home/deko/Python/Automation/venv/auto/lib/python3.13/site-packages/pandas/core/apply.py", line 1422, in apply
-    return self.apply_standard()
-           ~~~~~~~~~~~~~~~~~~~^^
-  File "/home/deko/Python/Automation/venv/auto/lib/python3.13/site-packages/pandas/core/apply.py", line 1502, in apply_standard
-    mapped = obj._map_values(
-        mapper=curried, na_action=action, convert=self.convert_dtype
-    )
-  File "/home/deko/Python/Automation/venv/auto/lib/python3.13/site-packages/pandas/core/base.py", line 923, in _map_values
-    return arr.map(mapper, na_action=na_action)
-           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/deko/Python/Automation/venv/auto/lib/python3.13/site-packages/pandas/core/arrays/_mixins.py", line 81, in method
-    return meth(self, *args, **kwargs)
-  File "/home/deko/Python/Automation/venv/auto/lib/python3.13/site-packages/pandas/core/arrays/datetimelike.py", line 763, in map
-    result = map_array(self, mapper, na_action=na_action)
-  File "/home/deko/Python/Automation/venv/auto/lib/python3.13/site-packages/pandas/core/algorithms.py", line 1743, in map_array
-    return lib.map_infer(values, mapper, convert=convert)
-           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "pandas/_libs/lib.pyx", line 2999, in pandas._libs.lib.map_infer
-  File "/home/deko/Python/Automation/process_invoices.py", line 20, in <lambda>
-    df['Status'] = df['DueDate'].apply(lambda d: 'Overdue' if d.date() < today else 'Due')
-                                                              ^^^^^^^^^^^^^^^^
-  File "pandas/_libs/tslibs/nattype.pyx", line 122, in pandas._libs.tslibs.nattype._NaT.__richcmp__
-TypeError: Cannot compare NaT with datetime.date object
-(auto) deko@deko-X1:~/Python/Automation$ 
-
-
--------------
-
 import pandas as pd
 from datetime import datetime
 from openpyxl import Workbook
-
 
 # Load the exported CSV from Xero
 input_file = 'invoices.csv'  # Change if your file name is different
 df = pd.read_csv(input_file)
 
-# Convert DueDate to datetime (adjust column name if needed)
-df['DueDate'] = pd.to_datetime(df['DueDate'])
+# Convert DueDate to datetime with dayfirst=True to handle DD/MM/YYYY
+df['DueDate'] = pd.to_datetime(df['DueDate'], dayfirst=True, errors='coerce')
 
 # Today's date (automatically uses current date when run)
 today = datetime.now().date()
@@ -53,8 +15,16 @@ today = datetime.now().date()
 # Filter for outstanding invoices (adjust 'Status' value if your Xero export uses different terms)
 df = df[(df['InvoiceAmountDue'] > 0) & (df['Status'] == 'Awaiting Payment')]
 
-# Compute custom Status: 'Overdue' if past due, else 'Due'
-df['Status'] = df['DueDate'].apply(lambda d: 'Overdue' if d.date() < today else 'Due')
+# Compute custom Status, handling NaT
+def get_status(d):
+    if pd.isna(d):
+        return 'Unknown'  # Or change to '' or drop these rows if preferred
+    elif d.date() < today:
+        return 'Overdue'
+    else:
+        return 'Due'
+
+df['Status'] = df['DueDate'].apply(get_status)
 
 # Select relevant columns including Currency for filtering
 temp_columns = ['ContactName', 'InvoiceNumber', 'Status', 'DueDate', 'Total', 'InvoiceAmountPaid', 'InvoiceAmountDue', 'Currency']
@@ -77,12 +47,22 @@ rename_dict = {
 eur_df = eur_df.rename(columns=rename_dict)
 usd_df = usd_df.rename(columns=rename_dict)
 
-# Format Due date as YYYY-MM-DD (no time)
-eur_df['Due date'] = eur_df['Due date'].dt.strftime('%d-%m-%Y')
-usd_df['Due date'] = usd_df['Due date'].dt.strftime('%d-%m-%Y')
+# Format Due date as DD-MM-YYYY (no time), handling NaT
+def format_date(d):
+    if pd.isna(d):
+        return ''
+    else:
+        return d.strftime('%d-%m-%Y')
 
-# Final columns order
-final_columns = ['Customer Name', 'Invoice #', 'Status', 'Due date', 'Total Amount', 'Amount Paid', 'Balance']
+eur_df['Due date'] = eur_df['Due date'].apply(format_date)
+usd_df['Due date'] = usd_df['Due date'].apply(format_date)
+
+# Final columns order (using renamed columns)
+final_columns = ['Customer Name', 'Invoice #', 'Payment Status', 'Due date', 'Total Amount', 'Amount Paid', 'Balance']
+
+# Reorder columns
+eur_df = eur_df[final_columns]
+usd_df = usd_df[final_columns]
 
 # Add total outstanding row for EUR
 eur_sum = eur_df['Balance'].sum()
