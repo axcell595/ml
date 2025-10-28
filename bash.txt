@@ -1,33 +1,47 @@
 import pandas as pd
 from datetime import datetime
-from openpyxl import Workbook
+import openpyxl
+from openpyxl.worksheet.table import Table, TableStyleInfo
+import shutil
+
+# Set today's date as per the given context
+today = datetime(2025, 10, 28).date()
 
 # Load the exported CSV from Xero
 input_file = 'invoices.csv'  # Change if your file name is different
 df = pd.read_csv(input_file)
 
+# Clean specific customer name
+df['ContactName'] = df['ContactName'].apply(lambda x: "Integral Poland" if x == "Integral Poland SpÃ³Å‚ka z ograniczonÄ… odpowiedzialnoÅ›ciÄ…" else x)
+
+# Drop duplicates based on customer and invoice number
+df = df.drop_duplicates(subset=['ContactName', 'InvoiceNumber'])
+
 # Convert DueDate to datetime with dayfirst=True to handle DD/MM/YYYY
 df['DueDate'] = pd.to_datetime(df['DueDate'], dayfirst=True, errors='coerce')
 
-# Today's date (automatically uses current date when run)
-today = datetime.now().date()
-
-# Filter for outstanding invoices (adjust 'Status' value if your Xero export uses different terms)
+# Filter for outstanding invoices (as per previous code; adjust if needed)
 df = df[(df['InvoiceAmountDue'] > 0) & (df['Status'] == 'Awaiting Payment')]
 
-# Compute custom Status, handling NaT
-def get_status(d):
+# Compute detailed Status
+def get_status(d, today):
     if pd.isna(d):
-        return 'Unknown'  # Or change to '' or drop these rows if preferred
-    elif d.date() < today:
-        return 'Overdue'
+        return ''
+    delta = (d.date() - today).days
+    if delta == 0:
+        return "Due today"
+    elif delta > 0:
+        day_str = "day" if delta == 1 else "days"
+        return f"Due in {delta} {day_str}"
     else:
-        return 'Due'
+        abs_delta = -delta
+        day_str = "day" if abs_delta == 1 else "days"
+        return f"Overdue by {abs_delta} {day_str}"
 
-df['Status'] = df['DueDate'].apply(get_status)
+df['Status'] = df['DueDate'].apply(lambda d: get_status(d, today))
 
 # Select relevant columns including Currency for filtering
-temp_columns = ['ContactName', 'InvoiceNumber', 'Status', 'DueDate', 'Total', 'InvoiceAmountPaid', 'InvoiceAmountDue', 'Currency']
+temp_columns = ['ContactName', 'InvoiceNumber', 'Status', 'DueDate', 'Total', 'InvoiceAmountPaid', 'InvoiceAmountDue', 'Description', 'Currency']
 df = df[temp_columns]
 
 # Separate into EUR and USD, dropping Currency
@@ -42,7 +56,8 @@ rename_dict = {
     'DueDate': 'Due date',
     'Total': 'Total Amount',
     'InvoiceAmountPaid': 'Amount Paid',
-    'InvoiceAmountDue': 'Balance'
+    'InvoiceAmountDue': 'Balance',
+    'Description': 'Description'
 }
 eur_df = eur_df.rename(columns=rename_dict)
 usd_df = usd_df.rename(columns=rename_dict)
@@ -57,27 +72,127 @@ def format_date(d):
 eur_df['Due date'] = eur_df['Due date'].apply(format_date)
 usd_df['Due date'] = usd_df['Due date'].apply(format_date)
 
-# Final columns order (using renamed columns)
-final_columns = ['Customer Name', 'Invoice #', 'Payment Status', 'Due date', 'Total Amount', 'Amount Paid', 'Balance']
+# Final columns order (without # initially)
+final_columns_no_num = ['Customer Name', 'Invoice #', 'Payment Status', 'Due date', 'Total Amount', 'Amount Paid', 'Balance', 'Description']
 
-# Reorder columns
-eur_df = eur_df[final_columns]
-usd_df = usd_df[final_columns]
+# Reorder, sort by Due date, reset index, then add #
+eur_df = eur_df[final_columns_no_num]
+eur_df = eur_df.sort_values(by='Due date', ascending=True).reset_index(drop=True)
+eur_df.insert(0, '#', range(1, len(eur_df) + 1))
 
-# Add total outstanding row for EUR
-eur_sum = eur_df['Balance'].sum()
-eur_total = pd.DataFrame([['Total Outstanding', '', '', '', '', '', eur_sum]], columns=final_columns)
-eur_df = pd.concat([eur_df, eur_total], ignore_index=True)
+usd_df = usd_df[final_columns_no_num]
+usd_df = usd_df.sort_values(by='Due date', ascending=True).reset_index(drop=True)
+usd_df.insert(0, '#', range(1, len(usd_df) + 1))
 
-# Add total outstanding row for USD
-usd_sum = usd_df['Balance'].sum()
-usd_total = pd.DataFrame([['Total Outstanding', '', '', '', '', '', usd_sum]], columns=final_columns)
-usd_df = pd.concat([usd_df, usd_total], ignore_index=True)
+# Final columns with #
+final_columns = ['#'] + final_columns_no_num
 
-# Write to Excel file with separate sheets
+# Output file
+template_file = 'template.xlsx'
 output_file = 'fo_out.xlsx'
-with pd.ExcelWriter(output_file) as writer:
-    eur_df.to_excel(writer, sheet_name='EUR', index=False)
-    usd_df.to_excel(writer, sheet_name='USD', index=False)
 
-print(f'Processing complete! Output saved to {output_file}')
+# Copy template to output
+shutil.copy(template_file, output_file)
+
+# Load the workbook
+wb = openpyxl.load_workbook(output_file)
+
+# Function to update a sheet (assuming headers in rows 1-3, data from 4)
+def update_sheet(ws, df, table_name, pivot_sheet_name, is_eur=True):
+    # Clear from row 4 down
+    max_row = ws.max_row
+    if max_row > 3:
+        ws.delete_rows(4, max_row - 3 + 1)
+
+    # Write data rows from row 4
+    num_data_rows = len(df)
+    last_row = 3 + num_data_rows  # last data row
+    for row_idx, row_data in enumerate(df.itertuples(index=False), start=4):
+        for col_idx, value in enumerate(row_data, start=1):
+            ws.cell(row=row_idx, column=col_idx, value=value)
+
+    # Insert blank row at last_row + 1
+    ws.insert_rows(last_row + 1)
+    blank_row = last_row + 1
+
+    # Copy format from row 2 to blank row
+    for col in range(1, ws.max_column + 1):
+        target_cell = ws.cell(blank_row, col)
+        source_cell = ws.cell(2, col)
+        if source_cell.has_style:
+            target_cell._style = source_cell._style
+
+    # Total row at last_row + 2
+    total_row = last_row + 2
+    total_label = "GRAND TOTAL" if is_eur else "TOTAL USD"
+    ws.cell(total_row, 7, value=total_label)  # Column G (7)
+
+    # Set font for label
+    font = openpyxl.styles.Font(name="Aptos", bold=True, size=14)
+    ws.cell(total_row, 7).font = font
+
+    # Sum formula in column H (8)
+    sum_range = f"H4:H{last_row}"
+    ws.cell(total_row, 8).value = f"=SUBTOTAL(9,{sum_range})"
+
+    # Number format and font for sum
+    currency_format = '"€" #,##0' if is_eur else '"$" #,##0'
+    ws.cell(total_row, 8).number_format = currency_format
+    ws.cell(total_row, 8).font = font
+    ws.cell(total_row, 8).alignment = openpyxl.styles.Alignment(horizontal='right')
+
+    # Clear contents and borders below total_row + 1
+    max_row_after = ws.max_row
+    if max_row_after > total_row:
+        ws.delete_rows(total_row + 1, max_row_after - total_row + 1)
+    # Note: Borders none not explicitly set, as delete clears.
+
+    # Copy format from row 80 to total_row +1 to +21
+    for offset in range(1, 22):
+        target_row_num = total_row + offset
+        for col in range(1, ws.max_column + 1):
+            target_cell = ws.cell(target_row_num, col)
+            source_cell = ws.cell(80, col)
+            if source_cell.has_style:
+                target_cell._style = source_cell._style
+
+    # If there is data, copy format from row 4 to 4:(total_row -1)
+    if num_data_rows > 0:
+        for r in range(4, total_row):
+            for col in range(1, ws.max_column + 1):
+                target_cell = ws.cell(r, col)
+                source_cell = ws.cell(4, col)
+                if source_cell.has_style:
+                    target_cell._style = source_cell._style
+
+    # Copy format from cell(2,1) to cell(total_row, 9) (column I)
+    source_cell = ws.cell(2, 1)
+    target_cell = ws.cell(total_row, 9)
+    if source_cell.has_style:
+        target_cell._style = source_cell._style
+
+    # Update or create table (headers in row 3, data 4 to last_row)
+    table_ref = f"A3:I{last_row}" if num_data_rows > 0 else "A3:I3"
+    if table_name in ws.tables:
+        ws.tables[table_name].ref = table_ref
+    else:
+        tab = Table(displayName=table_name, ref=table_ref)
+        style = TableStyleInfo(name="TableStyleMedium9", showFirstColumn=False,
+                               showLastColumn=False, showRowStripes=True, showColumnStripes=False)
+        tab.tableStyleInfo = style
+        ws.add_table(tab)
+
+    # Set pivot to refresh on load (if pivot sheet exists)
+    if pivot_sheet_name in wb.sheetnames:
+        pivot_ws = wb[pivot_sheet_name]
+        for pivot in pivot_ws._pivots:
+            pivot.cache.refreshOnLoad = True
+
+# Update EUR and USD
+update_sheet(wb['EUR'], eur_df, 'EURTable', 'EUR_Pivot', is_eur=True)
+update_sheet(wb['USD'], usd_df, 'USDTable', 'USD_Pivot', is_eur=False)
+
+# Save the updated file
+wb.save(output_file)
+
+print(f'Processing complete! Output saved to {output_file}. Open in Excel to see updated pivots.')
